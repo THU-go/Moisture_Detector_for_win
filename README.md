@@ -1,75 +1,236 @@
-<header>
+# Non-contact Plant/Soil Moisture Monitoring (Baseline MLP Regression)
 
-<!--
-  <<< Author notes: Course header >>>
-  Include a 1280×640 image, course title in sentence case, and a concise description in emphasis.
-  In your repository settings: enable template repository, add your 1280×640 social image, auto delete head branches.
-  Add your open source license, GitHub uses MIT license.
--->
+This repository provides a **minimal, complete, and runnable** baseline machine learning project for:
 
-# Introduction to GitHub
+> **Non-contact plant/soil moisture monitoring based on microwave transmission and edge AI**
 
-_Get started using GitHub in less than an hour._
-
-</header>
-
-<!--
-  <<< Author notes: Step 1 >>>
-  Choose 3-5 steps for your course.
-  The first step is always the hardest, so pick something easy!
-  Link to docs.github.com for further explanations.
-  Encourage users to open new tabs for steps!
--->
-
-## Step 1: Create a branch
-
-_Welcome to "Introduction to GitHub"! :wave:_
-
-**What is GitHub?**: GitHub is a collaboration platform that uses _[Git](https://docs.github.com/get-started/quickstart/github-glossary#git)_ for versioning. GitHub is a popular place to share and contribute to [open-source](https://docs.github.com/get-started/quickstart/github-glossary#open-source) software.
-<br>:tv: [Video: What is GitHub?](https://www.youtube.com/watch?v=pBy1zgt0XPc)
-
-**What is a repository?**: A _[repository](https://docs.github.com/get-started/quickstart/github-glossary#repository)_ is a project containing files and folders. A repository tracks versions of files and folders. For more information, see "[About repositories](https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories)" from GitHub Docs.
-
-**What is a branch?**: A _[branch](https://docs.github.com/en/get-started/quickstart/github-glossary#branch)_ is a parallel version of your repository. By default, your repository has one branch named `main` and it is considered to be the definitive branch. Creating additional branches allows you to copy the `main` branch of your repository and safely make any changes without disrupting the main project. Many people use branches to work on specific features without affecting any other parts of the project.
-
-Branches allow you to separate your work from the `main` branch. In other words, everyone's work is safe while you contribute. For more information, see "[About branches](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches)".
-
-**What is a profile README?**: A _[profile README](https://docs.github.com/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme)_ is essentially an "About me" section on your GitHub profile where you can share information about yourself with the community on GitHub.com. GitHub shows your profile README at the top of your profile page. For more information, see "[Managing your profile README](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme)".
-
-![profile-readme-example](/images/profile-readme-example.png)
-
-### :keyboard: Activity: Your first branch
-
-1. Open a new browser tab and navigate to your newly made repository. Then, work on the steps in your second tab while you read the instructions in this tab.
-2. Navigate to the **< > Code** tab in the header menu of your repository.
-
-   ![code-tab](/images/code-tab.png)
-
-3. Click on the **main** branch drop-down.
-
-   ![main-branch-dropdown](/images/main-branch-dropdown.png)
-
-4. In the field, name your branch `my-first-branch`. In this case, the name must be `my-first-branch` to trigger the course workflow.
-5. Click **Create branch: my-first-branch** to create your branch.
-
-   ![create-branch-button](/images/create-branch-button.png)
-
-   The branch will automatically switch to the one you have just created.
-   The **main** branch drop-down bar will reflect your new branch and display the new branch name.
-
-6. Wait about 20 seconds then refresh this page (the one you're following instructions from). [GitHub Actions](https://docs.github.com/en/actions) will automatically update to the next step.
-
-<footer>
-
-<!--
-  <<< Author notes: Footer >>>
-  Add a link to get support, GitHub status page, code of conduct, license link.
--->
+The current version uses a **synthetic dataset** to validate the full pipeline before replacing it with real measured data.
 
 ---
 
-Get help: [Post in our discussion board](https://github.com/orgs/skills/discussions/categories/introduction-to-github) &bull; [Review the GitHub status page](https://www.githubstatus.com/)
+## Important data disclaimer
 
-&copy; 2024 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
+The generated dataset is **synthetic data for pipeline validation/debugging only**.  
+It does **not** represent real calibrated experimental measurements.  
+For real deployment or scientific conclusions, replace this dataset with real collected and calibrated data.
 
-</footer>
+---
+
+## Project structure
+
+```text
+.
+├── data/
+│   └── (generated CSV will be saved here)
+├── outputs/
+│   └── (best checkpoint and plots will be saved here)
+├── dependency_bootstrap.py     # auto-install missing libs helper
+├── run_pipeline.py             # one-click pipeline runner
+├── generate_data.py
+├── model.py
+├── train.py
+├── utils.py
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Synthetic data design (physical intuition)
+
+The synthetic generator follows these assumptions:
+
+1. **Main relation:** moisture affects microwave attenuation, so detector **voltage generally decreases as moisture increases**.
+2. **Environmental disturbance:** `temperature` and `humidity` affect both moisture distribution and voltage drift.
+3. **Nonlinearity:** sinusoidal and interaction terms are added.
+4. **Noise:** Gaussian noise is injected into voltage and moisture to mimic measurement uncertainty.
+
+Generated columns:
+- `voltage`
+- `temperature`
+- `humidity`
+- `moisture`
+
+---
+
+## Automatic dependency installation (new)
+
+If your computer is missing some Python libraries, the project now supports **auto-install before running**:
+
+- `generate_data.py` will auto-check/install `numpy`, `pandas`
+- `train.py` will auto-check/install `numpy`, `pandas`, `scikit-learn`, `matplotlib`, `torch`
+- `run_pipeline.py` provides one-click full process (install deps → generate data → train/evaluate)
+
+This makes the baseline friendlier for beginner machines.
+
+---
+
+## Model and training setup
+
+- Framework: **PyTorch**
+- Task: **Regression**
+- Model: **MLP** with linear output layer
+- Loss: **MSELoss**
+- Optimizer: **Adam**
+- Split: 70% train / 15% val / 15% test
+- Scaling: `StandardScaler` fitted **only on training set**
+- Early stopping: enabled via patience + best checkpoint saving
+- Test metrics:
+  - MAE
+  - RMSE
+  - R²
+
+Future feature extension placeholders are easy to add, e.g.:
+- `soil_type`
+- `distance`
+- `baseline_voltage`
+
+---
+
+## GPU / CPU behavior
+
+Training automatically uses GPU when available:
+
+```python
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+```
+
+The code:
+1. Moves model to `device`
+2. Moves every batch (train/val/test) to `device`
+3. Computes loss/inference on the same device
+4. Saves checkpoint that can be loaded on either GPU or CPU using `map_location`
+
+So GPU is preferred, but CPU fallback is fully supported.
+
+---
+
+## Environment setup (recommended but optional)
+
+```bash
+python -m venv .venv
+# Windows PowerShell:
+# .venv\Scripts\Activate.ps1
+# Windows CMD:
+# .venv\Scripts\activate.bat
+# Linux/macOS:
+# source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Even if you skip manual install, scripts can auto-install missing packages.
+
+### Quick CUDA visibility check
+
+```bash
+python -c "import torch; print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')"
+```
+
+---
+
+## How to run
+
+### Option A (recommended): one-click full pipeline
+
+```bash
+python run_pipeline.py --n-samples 6000 --seed 42 --data-path data/synthetic_moisture.csv --output-dir outputs --epochs 120 --batch-size 128 --learning-rate 1e-3 --patience 18
+```
+
+### Option B: run step-by-step
+
+1) Generate synthetic dataset
+
+```bash
+python generate_data.py --n-samples 6000 --seed 42 --output data/synthetic_moisture.csv
+```
+
+2) Train/evaluate baseline MLP
+
+```bash
+python train.py --data-path data/synthetic_moisture.csv --output-dir outputs --epochs 120 --batch-size 128 --learning-rate 1e-3 --patience 18
+```
+
+---
+
+## Expected outputs
+
+After training, you should see:
+
+- `outputs/best_model.pt` (best checkpoint)
+- `outputs/loss_curve.png` (train/val loss curves)
+- `outputs/pred_vs_true.png` (predicted vs true scatter)
+
+Terminal logs include:
+- device information (CUDA availability, selected device, GPU name if used)
+- missing value checks
+- per-epoch training/validation losses
+- final MAE, RMSE, R²
+- short convergence + overfit/underfit summary
+
+---
+
+## How to open this project in VS Code (Windows)
+
+### Method 1: from VS Code UI
+1. Open VS Code.
+2. Click **File** → **Open Folder...**
+3. Select your project folder (this repository root).
+4. Open terminal in VS Code (`Ctrl + \``).
+5. (Optional) Activate venv, then run:
+   ```powershell
+   python run_pipeline.py
+   ```
+
+### Method 2: from PowerShell
+1. Open PowerShell and `cd` to project folder.
+2. Run:
+   ```powershell
+   code .
+   ```
+3. In VS Code terminal, run:
+   ```powershell
+   python run_pipeline.py
+   ```
+
+> If `code .` is not recognized, in VS Code press `Ctrl+Shift+P` and run:  
+> **Shell Command: Install 'code' command in PATH** (or reinstall VS Code with PATH option).
+
+---
+
+## Beginner-friendly Windows + NVIDIA GPU step-by-step
+
+1. Open **PowerShell** in the project folder.
+2. Create and activate venv:
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   ```
+3. (Optional) Install dependencies:
+   ```powershell
+   pip install -r requirements.txt
+   ```
+4. Verify PyTorch can see CUDA:
+   ```powershell
+   python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'No GPU detected')"
+   ```
+5. Run full project with one command:
+   ```powershell
+   python run_pipeline.py
+   ```
+6. Open the `outputs/` folder and check:
+   - `best_model.pt`
+   - `loss_curve.png`
+   - `pred_vs_true.png`
+
+If CUDA is not available, the script will run on CPU automatically.
+
+---
+
+## Notes for next stage
+
+Once the pipeline is verified, replace synthetic CSV with real STM32 + detector data and revisit:
+- feature engineering
+- calibration strategy
+- model selection
+- deployment constraints for edge AI
